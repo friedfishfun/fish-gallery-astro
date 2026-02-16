@@ -12,29 +12,24 @@ const { blogs }: Props = Astro.props;
 
 {
   blogs.length > 0 ? (
-    <div class="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-2">
+    <div class="grid grid-cols-3 gap-px sm:grid-cols-4 sm:gap-1">
       {blogs.map((blog) => (
         <a
           href={`/blog/${blog.id}`}
-          class="group block overflow-hidden rounded-md bg-gray-100"
+          class="group block overflow-hidden bg-gray-100"
           aria-label={blog.title}
           title={blog.title}
         >
           <img
             src={
               blog.thumbnail?.url
-                ? `${blog.thumbnail.url}?q=60&w=600&fit=crop`
+                ? `${blog.thumbnail.url}?q=60&w=800&fit=crop`
                 : "/assets/images/noimg.png"
             }
             alt={blog.title}
-            class="w-full aspect-square object-cover transition-transform duration-200 group-hover:scale-105"
+            class="w-full aspect-square object-cover transition duration-200 group-active:opacity-80"
             loading="lazy"
           />
-
-          {/* タイトルを軽く出したい場合：不要ならこのdivを消してOK */}
-          <div class="px-2 py-1 text-xs truncate bg-white/90">
-            {blog.title}
-          </div>
         </a>
       ))}
     </div>
