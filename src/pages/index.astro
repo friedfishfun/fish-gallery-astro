@@ -10,46 +10,46 @@ export const prerender = true;
 
 const settings = await getSettings();
 
-const { contents: blogs, totalCount } = await getBlogList({
+const { contents: blogs } = await getBlogList({
   limit: LIMIT,
 });
 
-// content_type の形が何で来ても落ちないように “文字列化” する
+// content_type が「配列（今回）」でも「文字列」でも落ちないように吸収
 const typeOf = (blog) => {
   const t = blog?.content_type;
 
   if (t == null) return "";
 
-  if (typeof t === "string") return t.trim();
-
-  if (typeof t === "number" || typeof t === "boolean") return String(t);
-
+  // 例: ["culture"] / ["sakanakara"] / ["culture","sakanakara"]
   if (Array.isArray(t)) {
-    const first = t[0];
-    return typeof first === "string" ? first.trim() : "";
+    return t
+      .filter((x) => typeof x === "string")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .join("|"); // "culture|sakanakara"
   }
 
+  if (typeof t === "string") return t.trim();
+
+  // 念のため：オブジェクト型で来る可能性も吸収
   if (typeof t === "object") {
     const v = t.id ?? t.value ?? t.name ?? t.label ?? t.key;
-    if (typeof v === "string") return v.trim();
-    if (typeof v === "number" || typeof v === "boolean") return String(v);
-
-    const deep = t.selected?.value ?? t.selected?.id ?? t.selected?.name;
-    return typeof deep === "string" ? deep.trim() : "";
+    return typeof v === "string" ? v.trim() : "";
   }
 
   return "";
 };
 
-// タイプ別に分ける
-const culturePost = blogs.find((blog) => typeOf(blog) === "culture");
-const sakanakaraPosts = blogs.filter((blog) => typeOf(blog) === "sakanakara");
+const hasType = (blog, key) => typeOf(blog).split("|").includes(key);
 
-// culturePost がギャラリーに混ざらないよう “IDで確実に除外”
+// タイプ別に分ける
+const culturePost = blogs.find((blog) => hasType(blog, "culture"));
+const sakanakaraPosts = blogs.filter((blog) => hasType(blog, "sakanakara"));
+
+// 👇 culturePost がギャラリーに混ざらないよう “IDで確実に除外”
 const otherPosts = blogs.filter((blog) => {
-  const t = typeOf(blog);
   if (culturePost && blog.id === culturePost.id) return false;
-  if (t === "sakanakara") return false;
+  if (hasType(blog, "sakanakara")) return false;
   return true;
 });
 
@@ -61,21 +61,6 @@ const Meta = {
 ---
 
 <Layout Meta={Meta}>
-  <!-- ✅ デバッグ：まずは content_type の正体を確定する（確認できたら後で消す） -->
-  <div class="space-y-2 mb-6">
-    <pre class="text-[10px] whitespace-pre-wrap break-words text-gray-500 bg-gray-50 p-2 rounded">
-{JSON.stringify(Object.keys(blogs?.[0] ?? {}), null, 2)}
-    </pre>
-
-    <div class="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-      culturePost: {culturePost ? culturePost.title : "NOT FOUND"}
-      <br />
-      types: {Array.from(new Set(blogs.map((b) => typeOf(b)))).join(" | ")}
-      <br />
-      sample content_type: {JSON.stringify(blogs?.[0]?.content_type ?? null)}
-    </div>
-  </div>
-
   <div class="space-y-16">
     <!-- 上段：文化宣言 -->
     {culturePost && (
