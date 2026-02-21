@@ -45,6 +45,11 @@ const Meta = {
 
 <Layout Meta={Meta}>
   <div class="space-y-16">
+<div class="text-xs text-gray-500">
+  culturePost: {culturePost ? culturePost.title : "NOT FOUND"}
+  <br />
+  types: {Array.from(new Set(blogs.map(b => (b.content_type ?? "").trim()))).join(" | ")}
+</div>
 
     {/* 上段：文化宣言 */}
     {culturePost && (
