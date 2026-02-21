@@ -14,6 +14,13 @@ const { contents: blogs, totalCount } = await getBlogList({
   limit: LIMIT,
 });
 
+// タイプ別に分ける
+const culturePost = blogs.find(blog => blog.content_type === "culture");
+const sakanakaraPosts = blogs.filter(blog => blog.content_type === "sakanakara");
+const otherPosts = blogs.filter(
+  blog => blog.content_type !== "culture" && blog.content_type !== "sakanakara"
+);
+
 const { contents: categories } = await getCategoryList();
 
 const Meta = {
@@ -22,12 +29,38 @@ const Meta = {
 ---
 
 <Layout Meta={Meta}>
-  <div class="space-y-8">
-    <BlogList blogs={blogs} />
-    <Pagination totalCount={totalCount} />
+  <div class="space-y-16">
+
+    {/* 上段：文化宣言 */}
+    {culturePost && (
+      <section>
+        <h2 class="text-3xl font-bold mb-4">魚揚げ文化宣言</h2>
+        <a href={`/blog/${culturePost.id}`} class="block border p-6 rounded-lg hover:bg-gray-50 transition">
+          <h3 class="text-2xl font-semibold mb-2">{culturePost.title}</h3>
+          <p class="text-gray-600">続きを読む →</p>
+        </a>
+      </section>
+    )}
+
+    {/* 中段：サカナカラ */}
+    {sakanakaraPosts.length > 0 && (
+      <section>
+        <h2 class="text-3xl font-bold mb-4">サカナカラ</h2>
+        <BlogList blogs={sakanakaraPosts} />
+      </section>
+    )}
+
+    {/* 下段：その他 */}
+    {otherPosts.length > 0 && (
+      <section>
+        <h2 class="text-3xl font-bold mb-4">ギャラリー</h2>
+        <BlogList blogs={otherPosts} />
+      </section>
+    )}
+
   </div>
 
-  <div class="space-y-8">
+  <div class="space-y-8 mt-16">
     <CategoryList categories={categories} />
   </div>
 </Layout>
