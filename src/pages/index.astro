@@ -15,11 +15,26 @@ const { contents: blogs, totalCount } = await getBlogList({
 });
 
 // タイプ別に分ける
-const culturePost = blogs.find(blog => blog.content_type === "culture");
-const sakanakaraPosts = blogs.filter(blog => blog.content_type === "sakanakara");
-const otherPosts = blogs.filter(
-  blog => blog.content_type !== "culture" && blog.content_type !== "sakanakara"
-);
+// タイプ値の揺れ対策（null/空白を吸収）
+const typeOf = (blog) => (blog.content_type ?? "").trim();
+
+// タイプ別に分ける
+const culturePost = blogs.find((blog) => typeOf(blog) === "culture");
+const sakanakaraPosts = blogs.filter((blog) => typeOf(blog) === "sakanakara");
+
+// 👇 culturePost がギャラリーに混ざらないよう “IDで確実に除外”
+const otherPosts = blogs.filter((blog) => {
+  const t = typeOf(blog);
+
+  // 文化宣言（見つかっていれば）を除外
+  if (culturePost && blog.id === culturePost.id) return false;
+
+  // サカナカラを除外
+  if (t === "sakanakara") return false;
+
+  // それ以外をギャラリーへ
+  return true;
+});
 
 const { contents: categories } = await getCategoryList();
 
