@@ -67,7 +67,7 @@ const Meta = {
 <div class="text-xs text-gray-500">
   culturePost: {culturePost ? culturePost.title : "NOT FOUND"}
   <br />
-  types: {Array.from(new Set(blogs.map(b => (b.content_type ?? "").trim()))).join(" | ")}
+types: {Array.from(new Set(blogs.map((b) => typeOf(b)))).join(" | ")}
 </div>
 
     {/* 上段：文化宣言 */}
