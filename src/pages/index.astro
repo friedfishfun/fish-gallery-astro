@@ -2,10 +2,10 @@
 import { getBlogList, getCategoryList } from "@libs/microcms.ts";
 import Layout from "@layouts/Layout.astro";
 import BlogList from "@components/BlogList.astro";
-import Pagination from "@components/Pagination.astro";
 import CategoryList from "@components/CategoryList.astro";
 import { LIMIT } from "@constants/index.ts";
 import { getSettings } from "@libs/microcms.ts";
+
 export const prerender = true;
 
 const settings = await getSettings();
@@ -14,19 +14,28 @@ const { contents: blogs, totalCount } = await getBlogList({
   limit: LIMIT,
 });
 
-// タイプ別に分ける
-// タイプ値の揺れ対策（null/空白を吸収）
+// content_type の形が何で来ても落ちないように “文字列化” する
 const typeOf = (blog) => {
-  const t = blog.content_type;
+  const t = blog?.content_type;
 
-  // 文字列ならそのまま
+  if (t == null) return "";
+
   if (typeof t === "string") return t.trim();
 
-  // selectがオブジェクトで来るパターン（例: { id, name } や { value, label }）
-  if (t && typeof t === "object") {
-    // よくある候補を順に拾う
-    const v = t.id ?? t.value ?? t.name ?? t.label;
-    return typeof v === "string" ? v.trim() : "";
+  if (typeof t === "number" || typeof t === "boolean") return String(t);
+
+  if (Array.isArray(t)) {
+    const first = t[0];
+    return typeof first === "string" ? first.trim() : "";
+  }
+
+  if (typeof t === "object") {
+    const v = t.id ?? t.value ?? t.name ?? t.label ?? t.key;
+    if (typeof v === "string") return v.trim();
+    if (typeof v === "number" || typeof v === "boolean") return String(v);
+
+    const deep = t.selected?.value ?? t.selected?.id ?? t.selected?.name;
+    return typeof deep === "string" ? deep.trim() : "";
   }
 
   return "";
@@ -36,17 +45,11 @@ const typeOf = (blog) => {
 const culturePost = blogs.find((blog) => typeOf(blog) === "culture");
 const sakanakaraPosts = blogs.filter((blog) => typeOf(blog) === "sakanakara");
 
-// 👇 culturePost がギャラリーに混ざらないよう “IDで確実に除外”
+// culturePost がギャラリーに混ざらないよう “IDで確実に除外”
 const otherPosts = blogs.filter((blog) => {
   const t = typeOf(blog);
-
-  // 文化宣言（見つかっていれば）を除外
   if (culturePost && blog.id === culturePost.id) return false;
-
-  // サカナカラを除外
   if (t === "sakanakara") return false;
-
-  // それ以外をギャラリーへ
   return true;
 });
 
@@ -58,30 +61,37 @@ const Meta = {
 ---
 
 <Layout Meta={Meta}>
+  <!-- ✅ デバッグ：まずは content_type の正体を確定する（確認できたら後で消す） -->
+  <div class="space-y-2 mb-6">
+    <pre class="text-[10px] whitespace-pre-wrap break-words text-gray-500 bg-gray-50 p-2 rounded">
+{JSON.stringify(Object.keys(blogs?.[0] ?? {}), null, 2)}
+    </pre>
 
-  <pre class="text-[10px] whitespace-pre-wrap break-words text-gray-500 bg-gray-50 p-2 rounded">
-    {JSON.stringify(Object.keys(blogs?.[0] ?? {}), null, 2)}
-  </pre>
+    <div class="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+      culturePost: {culturePost ? culturePost.title : "NOT FOUND"}
+      <br />
+      types: {Array.from(new Set(blogs.map((b) => typeOf(b)))).join(" | ")}
+      <br />
+      sample content_type: {JSON.stringify(blogs?.[0]?.content_type ?? null)}
+    </div>
+  </div>
 
   <div class="space-y-16">
-<div class="text-xs text-gray-500">
-  culturePost: {culturePost ? culturePost.title : "NOT FOUND"}
-  <br />
-types: {Array.from(new Set(blogs.map((b) => typeOf(b)))).join(" | ")}
-</div>
-
-    {/* 上段：文化宣言 */}
+    <!-- 上段：文化宣言 -->
     {culturePost && (
       <section>
         <h2 class="text-3xl font-bold mb-4">魚揚げ文化宣言</h2>
-        <a href={`/blog/${culturePost.id}`} class="block border p-6 rounded-lg hover:bg-gray-50 transition">
+        <a
+          href={`/blog/${culturePost.id}`}
+          class="block border p-6 rounded-lg hover:bg-gray-50 transition"
+        >
           <h3 class="text-2xl font-semibold mb-2">{culturePost.title}</h3>
           <p class="text-gray-600">続きを読む →</p>
         </a>
       </section>
     )}
 
-    {/* 中段：サカナカラ */}
+    <!-- 中段：サカナカラ -->
     {sakanakaraPosts.length > 0 && (
       <section>
         <h2 class="text-3xl font-bold mb-4">サカナカラ</h2>
@@ -89,14 +99,13 @@ types: {Array.from(new Set(blogs.map((b) => typeOf(b)))).join(" | ")}
       </section>
     )}
 
-    {/* 下段：その他 */}
+    <!-- 下段：その他 -->
     {otherPosts.length > 0 && (
       <section>
         <h2 class="text-3xl font-bold mb-4">ギャラリー</h2>
         <BlogList blogs={otherPosts} />
       </section>
     )}
-
   </div>
 
   <div class="space-y-8 mt-16">
