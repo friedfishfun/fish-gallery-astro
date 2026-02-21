@@ -16,7 +16,21 @@ const { contents: blogs, totalCount } = await getBlogList({
 
 // タイプ別に分ける
 // タイプ値の揺れ対策（null/空白を吸収）
-const typeOf = (blog) => (blog.content_type ?? "").trim();
+const typeOf = (blog) => {
+  const t = blog.content_type;
+
+  // 文字列ならそのまま
+  if (typeof t === "string") return t.trim();
+
+  // selectがオブジェクトで来るパターン（例: { id, name } や { value, label }）
+  if (t && typeof t === "object") {
+    // よくある候補を順に拾う
+    const v = t.id ?? t.value ?? t.name ?? t.label;
+    return typeof v === "string" ? v.trim() : "";
+  }
+
+  return "";
+};
 
 // タイプ別に分ける
 const culturePost = blogs.find((blog) => typeOf(blog) === "culture");
